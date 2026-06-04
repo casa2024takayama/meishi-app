@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>名刺管理</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="app-header">
+    <button type="button" id="btn-back" class="btn-back hidden" aria-label="戻る">←</button>
+    <h1 id="page-title">名刺一覧</h1>
+  </header>
+  <main id="app"></main>
+
+  <div id="loading" class="loading-overlay hidden" aria-live="polite">
+    <div class="loading-box">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">処理中...</p>
+    </div>
+  </div>
+
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <img id="modal-image" alt="名刺画像">
+      <button type="button" id="modal-close" class="btn btn-secondary">閉じる</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="https://unpkg.com/dexie@4/dist/dexie.min.js"></script>
+  <script type="module" src="js/app.js?v=5"></script>
+</body>
+</html>
