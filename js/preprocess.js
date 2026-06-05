@@ -1,4 +1,4 @@
-/** OCR 向け画像前処理（拡大・コントラスト・二値化） */
+/** OCR 向け画像前処理（拡大・グレースケール・適応的二値化） */
 
 const MIN_LONG_EDGE = 2200;
 const MAX_LONG_EDGE = 3200;
@@ -29,9 +29,51 @@ function canvasToBlob(canvas) {
 }
 
 /**
+ * Bradley-Roth 適応的二値化。
+ * 各画素を周囲ウィンドウの平均と比較するため、照明ムラやグラデーション、
+ * 色付き背景の名刺でも文字をきれいに抜き出せる（大域 Otsu より高精度）。
+ */
+function adaptiveThreshold(gray, w, h) {
+  // 積分画像（各点までの輝度合計）。Uint32 に収まる（255 * 画素数 < 2^32）。
+  const integral = new Uint32Array((w + 1) * (h + 1));
+  for (let y = 0; y < h; y++) {
+    let rowSum = 0;
+    for (let x = 0; x < w; x++) {
+      rowSum += gray[y * w + x];
+      integral[(y + 1) * (w + 1) + (x + 1)] =
+        integral[y * (w + 1) + (x + 1)] + rowSum;
+    }
+  }
+
+  // ウィンドウは長辺の約 1/16（文字 1〜2 文字分）。t は明るさ補正の閾値。
+  const half = Math.max(8, Math.round(Math.min(w, h) / 16));
+  const T_PERCENT = 12; // 平均より 12% 暗ければ文字とみなす
+  const out = new Uint8ClampedArray(w * h);
+
+  for (let y = 0; y < h; y++) {
+    const y1 = Math.max(0, y - half);
+    const y2 = Math.min(h - 1, y + half);
+    for (let x = 0; x < w; x++) {
+      const x1 = Math.max(0, x - half);
+      const x2 = Math.min(w - 1, x + half);
+      const count = (x2 - x1 + 1) * (y2 - y1 + 1);
+      const sum =
+        integral[(y2 + 1) * (w + 1) + (x2 + 1)] -
+        integral[y1 * (w + 1) + (x2 + 1)] -
+        integral[(y2 + 1) * (w + 1) + x1] +
+        integral[y1 * (w + 1) + x1];
+      // gray*count <= sum*(100-t)/100 なら黒
+      out[y * w + x] =
+        gray[y * w + x] * count <= (sum * (100 - T_PERCENT)) / 100 ? 0 : 255;
+    }
+  }
+  return out;
+}
+
+/**
  * 名刺 OCR 向けに画像を最適化
  * - 長辺を 2200px 以上に拡大（上限 3200px）
- * - グレースケール + コントラスト強調 + 二値化
+ * - グレースケール + 適応的二値化（Bradley-Roth）
  */
 export async function preprocessForOcr(blob) {
   const img = await blobToImage(blob);
@@ -58,42 +100,18 @@ export async function preprocessForOcr(blob) {
   const imageData = ctx.getImageData(0, 0, w, h);
   const { data } = imageData;
 
-  const hist = new Array(256).fill(0);
-  for (let i = 0; i < data.length; i += 4) {
-    const g = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
-    hist[g]++;
-  }
-
-  let sum = 0;
-  for (let i = 0; i < 256; i++) sum += i * hist[i];
-  let sumB = 0;
-  let wB = 0;
-  let max = 0;
-  let threshold = 140;
-  const total = w * h;
-
-  for (let t = 0; t < 256; t++) {
-    wB += hist[t];
-    if (!wB) continue;
-    const wF = total - wB;
-    if (!wF) break;
-    sumB += t * hist[t];
-    const mB = sumB / wB;
-    const mF = (sum - sumB) / wF;
-    const between = wB * wF * (mB - mF) ** 2;
-    if (between > max) {
-      max = between;
-      threshold = t;
-    }
-  }
-
-  threshold = Math.max(90, Math.min(180, threshold));
-
-  for (let i = 0; i < data.length; i += 4) {
+  // グレースケール化（軽いコントラスト強調を併用）
+  const gray = new Uint8ClampedArray(w * h);
+  for (let i = 0, p = 0; i < data.length; i += 4, p++) {
     let g = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-    g = (g - 128) * 1.4 + 128;
-    g = Math.max(0, Math.min(255, g));
-    const v = g > threshold ? 255 : 0;
+    g = (g - 128) * 1.2 + 128;
+    gray[p] = g < 0 ? 0 : g > 255 ? 255 : g;
+  }
+
+  const binary = adaptiveThreshold(gray, w, h);
+
+  for (let p = 0, i = 0; p < binary.length; p++, i += 4) {
+    const v = binary[p];
     data[i] = data[i + 1] = data[i + 2] = v;
     data[i + 3] = 255;
   }
