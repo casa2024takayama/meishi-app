@@ -1,6 +1,18 @@
 # 名刺管理 Web アプリ
 
+**Version: v1.1.0**（2026-06-05）
+
 iPhone Safari 向けの名刺管理 Web アプリ（Phase 1〜2 + Phase 4 Claude 構造化）。
+
+## 変更履歴
+
+### v1.1.0（2026-06-05）
+- **iOSで写真選択が可能に**：`capture="environment"` 属性を削除し、カメラ/写真ライブラリの選択肢が出るようにした
+
+### v1.0.0（初期リリース）
+- カメラ撮影 + iPhone標準OCR + Tesseract + Claude構造化 + IndexedDB保存
+
+---
 
 ## 開発環境（Mac）
 
@@ -69,7 +81,12 @@ meishi-app/
 │   ├── parser.js
 │   └── ...
 ├── proxy/
-│   └── server.js      # CORS プロキシ（開発用）
+│   └── server.js      # CORS プロキシ（Mac ローカル開発用）
+├── functions/
+│   └── index.js       # Firebase Claude プロキシ
+├── worker/
+│   └── claude-proxy.js
+├── firebase/README.md
 └── README.md
 ```
 
@@ -113,24 +130,28 @@ git push -u origin main
 
 ### Claude を GitHub Pages で使う
 
-Mac の `proxy/server.js` は Pages では動きません。**Cloudflare Workers** にプロキシをデプロイします。
+Mac の `proxy/server.js` は Pages では動きません。次のいずれかでプロキシをデプロイします。
 
-**詳細手順:** [`worker/README.md`](worker/README.md)
+| 方式 | 手順 |
+|---|---|
+| **Firebase Functions**（推奨・Firebase 利用者向け） | [`firebase/README.md`](firebase/README.md) |
+| **Cloudflare Workers** | [`worker/README.md`](worker/README.md) |
 
-#### 最短手順
+#### Firebase 最短手順
 
 ```bash
-npm install -g wrangler
-wrangler login
-cd ~/Projects/meishi-app/worker
-wrangler deploy
+npm install -g firebase-tools
+firebase login
+cd ~/Projects/meishi-app
+cp .firebaserc.example .firebaserc
+# .firebaserc のプロジェクト ID を編集
+cd functions && npm install && cd ..
+firebase deploy --only functions
 ```
 
-表示された URL の末尾に `/api/structure` を付けて、アプリの **設定 → プロキシ URL** に入力します。
+表示された **Function URL**（例: `https://asia-northeast1-xxx.cloudfunctions.net/structure`）を、設定の **プロキシ URL** にそのまま入力。
 
-例: `https://meishi-claude-proxy.<あなた>.workers.dev/api/structure`
-
-あわせて [Anthropic Console](https://console.anthropic.com/) の API キーを **設定 → Anthropic API キー** に保存し、**Claude で項目を自動入力** を ON にします。
+API キーは [Anthropic Console](https://console.anthropic.com/) のものを設定（ローカルと**同じキーで OK**）。**Claude で項目を自動入力** を ON。
 
 ### ローカル開発との違い
 
