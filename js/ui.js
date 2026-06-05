@@ -84,7 +84,7 @@ export function renderSettings(settings) {
       <div class="form-group">
         <label for="proxy-url">プロキシ URL（Mac 上で起動）</label>
         <input type="url" id="proxy-url" name="proxyUrl" value="${escapeAttr(settings.proxyUrl)}" placeholder="http://192.168.0.100:8787/api/structure">
-        <p class="field-hint">GitHub Pages 利用時は Cloudflare Worker の URL を指定。ローカル開発時は http://&lt;MacのIP&gt;:8787/api/structure</p>
+        <p class="field-hint">Firebase: <code>...cloudfunctions.net/structure</code> / Worker: <code>...workers.dev/api/structure</code> / ローカル: <code>http://&lt;Mac IP&gt;:8787/api/structure</code></p>
       </div>
       <button type="submit" class="btn btn-primary btn-block">保存</button>
     </form>
@@ -95,7 +95,7 @@ export function renderCapture() {
   return `
     <div class="capture-area">
       <label class="file-input-label" id="file-label">
-        <input type="file" id="file-input" accept="image/*" capture="environment">
+        <input type="file" id="file-input" accept="image/*">
         カメラで撮影 / 写真を選択
       </label>
 
