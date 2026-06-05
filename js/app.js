@@ -1,12 +1,14 @@
 import { structureText } from './claude.js';
 import {
   defaultCropRegion,
+  detectCardRegion,
   fileToJpegBlob,
   getCroppedBlob,
   initCropSelector,
   loadImageFromFile,
 } from './crop.js';
 import { deleteCard, emptyCard, getAllCards, getCard, saveCard } from './db.js';
+import { exportCardsToXlsx } from './export.js';
 import { progressLabel, progressPercent, runOcr } from './ocr.js';
 import { getSettings, saveSettings } from './settings.js';
 import {
@@ -118,6 +120,17 @@ async function render() {
     const cards = await getAllCards();
     app.innerHTML = renderList(cards, listObjectUrls);
     document.getElementById('fab-add')?.addEventListener('click', () => navigate('#/capture'));
+    document.getElementById('btn-export-xlsx')?.addEventListener('click', async () => {
+      showLoading('Excel を作成中...');
+      try {
+        const count = await exportCardsToXlsx();
+        hideLoading();
+        alert(`${count} 件を Excel に出力しました`);
+      } catch (err) {
+        hideLoading();
+        alert(err.message);
+      }
+    });
     return;
   }
 
@@ -258,6 +271,14 @@ function bindCaptureEvents() {
           cropBox,
           null
         );
+        // 名刺の矩形を自動検出してクロップ枠を初期セット（失敗時は既定枠）
+        let detected = null;
+        try {
+          detected = detectCardRegion(captureState.img);
+        } catch (err) {
+          console.warn('自動切り抜きの検出に失敗:', err);
+        }
+        captureState.cropApi.setRegion(detected || defaultCropRegion());
         captureState.cropApi.relayout();
       };
       cropImage.onload = setupCrop;

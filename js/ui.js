@@ -1,3 +1,5 @@
+import { APP_VERSION } from './version.js';
+
 const FIELD_LABELS = {
   eventName: 'イベント名',
   tags: 'タグ（カンマ区切り）',
@@ -44,9 +46,11 @@ export function renderList(cards, urlRegistry = null) {
 
   return `
     <div class="list-toolbar">
+      <button type="button" id="btn-export-xlsx" class="btn btn-secondary btn-sm">Excel出力</button>
       <a href="#/settings" class="btn btn-secondary btn-sm">設定</a>
     </div>
     <div class="card-list">${items}</div>
+    <p class="app-version">${APP_VERSION}</p>
     <button type="button" class="fab" id="fab-add" aria-label="名刺を追加">+</button>
   `;
 }
@@ -60,6 +64,7 @@ export function renderEmptyList() {
       <p>名刺がまだありません</p>
       <p>右下の + ボタンから追加してください</p>
     </div>
+    <p class="app-version">${APP_VERSION}</p>
     <button type="button" class="fab" id="fab-add" aria-label="名刺を追加">+</button>
   `;
 }
@@ -87,6 +92,7 @@ export function renderSettings(settings) {
         <p class="field-hint">Firebase: <code>...cloudfunctions.net/structure</code> / Worker: <code>...workers.dev/api/structure</code> / ローカル: <code>http://&lt;Mac IP&gt;:8787/api/structure</code></p>
       </div>
       <button type="submit" class="btn btn-primary btn-block">保存</button>
+      <p class="app-version">バージョン ${APP_VERSION}</p>
     </form>
   `;
 }
@@ -120,7 +126,7 @@ export function renderCapture() {
         <details class="tesseract-panel">
           <summary>アプリ内 OCR（Tesseract・低精度 / オフライン）</summary>
           <div class="crop-stage">
-            <p class="crop-hint">枠を文字部分にぴったり合わせてください。</p>
+            <p class="crop-hint">名刺の範囲を自動検出しました。必要なら枠を調整してください。</p>
             <div id="crop-container" class="crop-container">
               <img id="crop-image" class="crop-image" alt="クロップ対象">
               <div id="crop-box" class="crop-box">
